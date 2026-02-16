@@ -175,39 +175,46 @@ func (tm *txManager) FinalizeTransactions(ctx context.Context, dbTX persistence.
 		// Failures must not override success, so when we have failure we check for previously persisted success
 		// (it's a shame we need to hold the table lock here, but we do this on multiple threads due to detecting
 		// failures remotely and successes locally)
-		if err == nil && len(failedTransactionIDs) > 0 {
-			var existingSuccessReceipts []*transactionReceipt
-			err := dbTX.DB().Table("transaction_receipts").
+		var receiptsToDelete []uuid.UUID
+		if err == nil {
+			var duplicateReceipts []*transactionReceipt
+			err = dbTX.DB().Table("transaction_receipts").
 				WithContext(ctx).
 				Where("transaction IN ?", failedTransactionIDs).
-				Where("success IS TRUE").
-				Find(&existingSuccessReceipts).
+				Find(&duplicateReceipts).
 				Error
-			if err != nil {
-				return err
-			}
-			if len(existingSuccessReceipts) > 0 {
+			if len(duplicateReceipts) > 0 {
 				trimmedReceiptsToInsert := make([]*transactionReceipt, 0, len(receiptsToInsert))
 				for _, receipt := range receiptsToInsert {
-					foundSuccess := false
-					for _, existingSuccess := range existingSuccessReceipts {
-						if existingSuccess.TransactionID == receipt.TransactionID {
-							foundSuccess = true
+					var duplicate *transactionReceipt
+					for _, existing := range duplicateReceipts {
+						if existing.TransactionID == receipt.TransactionID {
+							duplicate = existing
 							break
 						}
 					}
-					if foundSuccess {
+					if duplicate != nil && duplicate.Success {
 						var failureMsg string
 						if receipt.FailureMessage != nil {
 							failureMsg = *receipt.FailureMessage
 						}
 						log.L(ctx).Warnf("Duplicate receipt for transaction %s discarded due to existing success receipt. Error: %s", receipt.TransactionID, failureMsg)
 					} else {
+						if duplicate != nil && receipt.Success {
+							// We need to remove the previous duplicate, otherwise we won't insert the success receipt
+							receiptsToDelete = append(receiptsToDelete, duplicate.TransactionID)
+						}
 						trimmedReceiptsToInsert = append(trimmedReceiptsToInsert, receipt)
 					}
 				}
 				receiptsToInsert = trimmedReceiptsToInsert
 			}
+		}
+		if err == nil && len(receiptsToDelete) > 0 {
+			err = dbTX.DB().Table("transaction_receipts").
+				WithContext(ctx).
+				Delete(&transactionReceipt{}, "transaction IN ?", receiptsToDelete).
+				Error
 		}
 		if err == nil && len(receiptsToInsert) > 0 {
 			err = dbTX.DB().Table("transaction_receipts").
