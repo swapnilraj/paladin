@@ -225,11 +225,6 @@ func NewSequencer(
 	return newSequencer, nil
 }
 
-func (s *Sequencer) abort(err error) {
-	log.L(s.ctx).Errorf("Sequencer aborting: %s", err)
-	s.stopProcess <- true
-
-}
 func (s *Sequencer) getTransactionProcessor(txID string) ptmgrtypes.TransactionFlow {
 	s.incompleteTxProcessMapMutex.Lock()
 	defer s.incompleteTxProcessMapMutex.Unlock()
@@ -321,7 +316,11 @@ func (s *Sequencer) Start(ctx context.Context) (done <-chan struct{}, err error)
 }
 
 // Stop the InFlight transaction process.
-func (s *Sequencer) Stop() {
+func (s *Sequencer) Stop(err error) {
+	if err != nil {
+		log.L(s.ctx).Errorf("Sequencer aborting: %s", err)
+	}
+
 	// try to send an item in `stopProcess` channel, which has a buffer of 1
 	// if it already has an item in the channel, this function does nothing
 	s.assembleCoordinator.Stop()
