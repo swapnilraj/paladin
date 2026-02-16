@@ -102,7 +102,7 @@ func (tm *txManager) FinalizeTransactions(ctx context.Context, dbTX persistence.
 	}
 
 	transactionIDResults := make(map[uuid.UUID]bool)
-	possibleChainingRecordIDs := make([]uuid.UUID, 0, len(info))
+	transactionIDs := make([]uuid.UUID, 0, len(info))
 	receiptsToInsert := make([]*transactionReceipt, 0, len(info))
 	for _, ri := range info {
 		receipt := &transactionReceipt{
@@ -155,7 +155,7 @@ func (tm *txManager) FinalizeTransactions(ctx context.Context, dbTX persistence.
 		transactionIDResults[receipt.TransactionID] = receipt.Success
 		log.L(ctx).Infof("Inserting receipt txId=%s success=%t failure=%s txHash=%v", receipt.TransactionID, receipt.Success, failureMsg, receipt.TransactionHash)
 		receiptsToInsert = append(receiptsToInsert, receipt)
-		possibleChainingRecordIDs = append(possibleChainingRecordIDs, receipt.TransactionID)
+		transactionIDs = append(transactionIDs, receipt.TransactionID)
 	}
 	var failedTransactionIDs []uuid.UUID
 	for txID, isSuccess := range transactionIDResults {
@@ -180,7 +180,7 @@ func (tm *txManager) FinalizeTransactions(ctx context.Context, dbTX persistence.
 			var duplicateReceipts []*transactionReceipt
 			err = dbTX.DB().Table("transaction_receipts").
 				WithContext(ctx).
-				Where("transaction IN ?", failedTransactionIDs).
+				Where("transaction IN ?", transactionIDs).
 				Find(&duplicateReceipts).
 				Error
 			if len(duplicateReceipts) > 0 {
@@ -231,10 +231,10 @@ func (tm *txManager) FinalizeTransactions(ctx context.Context, dbTX persistence.
 		}
 	}
 
-	if len(possibleChainingRecordIDs) > 0 {
+	if len(transactionIDs) > 0 {
 		var chainingRecords []*persistedChainedPrivateTxn
 		err := dbTX.DB().
-			Where(`"chained_transaction" IN ?`, possibleChainingRecordIDs).
+			Where(`"chained_transaction" IN ?`, transactionIDs).
 			Find(&chainingRecords).
 			Error
 		// Recurse into PrivateTXManager, who will call us back, or send via the transport mgr
