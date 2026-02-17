@@ -157,12 +157,6 @@ func (tm *txManager) FinalizeTransactions(ctx context.Context, dbTX persistence.
 		receiptsToInsert = append(receiptsToInsert, receipt)
 		transactionIDs = append(transactionIDs, receipt.TransactionID)
 	}
-	var failedTransactionIDs []uuid.UUID
-	for txID, isSuccess := range transactionIDResults {
-		if !isSuccess {
-			failedTransactionIDs = append(failedTransactionIDs, txID)
-		}
-	}
 
 	if len(receiptsToInsert) > 0 {
 		// It is very important that the sequence number for receipts increases in the commit order of the transactions.
