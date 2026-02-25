@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:17.6
+    command: -c 'max_connections=200'
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: my-secret
+
+  # Free gas Nethermind setup (equivalent to besu_free)
+  #
+  # Chain ID:  1337  (0x539, matches Paladin's test expectation)
+  # Gas price: 0     (free transactions, no ETH balance required)
+  # Consensus: NethDev instant sealing (mines one block per transaction)
+  # EVM:       Prague (all EIPs up to and including EIP-7702)
+  #
+  # Port mapping rationale:
+  #   Nethermind serves both HTTP JSON-RPC and WebSocket (via HTTP upgrade) on the
+  #   same port (8545). We expose it twice so Paladin's separate HTTP and WS clients
+  #   can both connect using the Besu-convention ports (HTTP=8545, WS=8546).
+  #
+  # Config strategy:
+  #   Use 'spaceneth' as the base config (sets up NethDev mining, in-memory DB,
+  #   no peer discovery). Override only what differs: host binding, chain spec,
+  #   gas price, and gas limit.
+  nethermind:
+    image: nethermind/nethermind:latest
+    ports:
+      - "8545:8545"   # HTTP RPC
+      - "8546:8545"   # WebSocket RPC (same Nethermind port, separate Docker alias)
+    volumes:
+      - ./nethermind/chainspec.json:/nethermind/chainspec/paladin.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/localhost/8545'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    command:
+      - --config=spaceneth
+      - --JsonRpc.Host=0.0.0.0
+      - --Init.ChainSpecPath=chainspec/paladin.json
+      - --Blocks.MinGasPrice=0
+      - --Blocks.TargetBlockGasLimit=30000000

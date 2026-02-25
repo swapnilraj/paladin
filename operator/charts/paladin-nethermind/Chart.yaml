@@ -1,0 +1,8 @@
+apiVersion: v2
+name: paladin-nethermind
+description: Deploys a Nethermind blockchain node and 3-node Paladin network for development
+
+type: application
+
+version: 0.1.0
+appVersion: "1.0"

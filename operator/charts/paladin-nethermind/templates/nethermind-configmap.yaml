@@ -1,0 +1,143 @@
+{{/*
+Pre-funded genesis accounts are split into two groups:
+
+1. Sequential private keys (NethDev default accounts, key = 0x000...00N):
+   0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf  key=0x01
+   0x2B5AD5c4795c026514f8317c7a215E218DcCD6cf  key=0x02
+   0x6813Eb9362372EEF6200f3b1dbc3f819671cba69  key=0x03
+   0x1efF47bC3a10a45D4B230B5D10E37751FE6AA718  key=0x04
+   0xe1AB8145F7E55DC933D51a18c793F901A3A0b276  key=0x05
+   0xE57bFE9F44b819898F47BF37E5AF72a0783e1141  key=0x06
+   0xd41c057fd1c78805AAc12b0A94a405c0461A6FBB  key=0x07
+   0xF1F6619B38A98d6de0800f1DefC0a6399EB6d30c  key=0x08
+   0xF7Edc8FA1eCC32967F827C9043FcAe6BA73aFa5c  key=0x09
+   0x4CCeBa2D7D2B4fDcE4304d3E09a1fea9FBeB1528  key=0x0a
+
+2. Hardhat accounts (mnemonic: "test test test test test test test test test test test junk"):
+   These are the signing addresses used by the Paladin nodes (see node-keys-secret.yaml).
+   node1: HH0=owner  HH1=registry.operator  HH2=registry.node1  HH3=noto.operator  HH4=pente.operator  HH5=zeto.operator
+   node2: HH6=owner  HH7=registry.operator  HH8=registry.node2  HH9=noto.operator  HH10=pente.operator  HH11=zeto.operator
+   node3: HH12=owner  HH13=registry.operator  HH14=registry.node3  HH15=noto.operator  HH16=pente.operator  HH17=zeto.operator
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nethermind-chainspec
+  labels:
+    app.kubernetes.io/name: nethermind
+    app.kubernetes.io/component: blockchain
+data:
+  chainspec.json: |
+    {
+      "name": "PaladinDev",
+      "dataDir": "paladindev",
+      "engine": {
+        "NethDev": {
+          "params": {}
+        }
+      },
+      "params": {
+        "gasLimitBoundDivisor": "0x0400",
+        "accountStartNonce": "0x0",
+        "maximumExtraDataSize": "0x20",
+        "minGasLimit": "0x1388",
+        "networkID": "0x539",
+        "eip140Transition": "0x0",
+        "eip145Transition": "0x0",
+        "eip150Transition": "0x0",
+        "eip155Transition": "0x0",
+        "eip160Transition": "0x0",
+        "eip161abcTransition": "0x0",
+        "eip161dTransition": "0x0",
+        "eip211Transition": "0x0",
+        "eip214Transition": "0x0",
+        "eip658Transition": "0x0",
+        "eip1014Transition": "0x0",
+        "eip1052Transition": "0x0",
+        "eip1283Transition": "0x0",
+        "eip1283DisableTransition": "0x0",
+        "eip152Transition": "0x0",
+        "eip1108Transition": "0x0",
+        "eip1344Transition": "0x0",
+        "eip1884Transition": "0x0",
+        "eip2028Transition": "0x0",
+        "eip2200Transition": "0x0",
+        "eip2315Transition": "0x0",
+        "eip2537Transition": "0x0",
+        "eip2565Transition": "0x0",
+        "eip2929Transition": "0x0",
+        "eip2930Transition": "0x0",
+        "eip1559Transition": "0x0",
+        "eip3198Transition": "0x0",
+        "eip3529Transition": "0x0",
+        "eip3541Transition": "0x0",
+        "eip3651TransitionTimestamp": "0x0",
+        "eip3855TransitionTimestamp": "0x0",
+        "eip4895TransitionTimestamp": "0x0",
+        "eip1153TransitionTimestamp": "0x0",
+        "eip4788TransitionTimestamp": "0x0",
+        "eip4844TransitionTimestamp": "0x0",
+        "eip5656TransitionTimestamp": "0x0",
+        "eip6780TransitionTimestamp": "0x0",
+        "eip2537TransitionTimestamp": "0x0",
+        "eip2935TransitionTimestamp": "0x0",
+        "eip7702TransitionTimestamp": "0x0",
+        "eip7623TransitionTimestamp": "0x0"
+      },
+      "genesis": {
+        "seal": {
+          "ethereum": {
+            "nonce": "0x0000000000000042",
+            "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        },
+        "difficulty": "0x01",
+        "author": "0x0000000000000000000000000000000000000000",
+        "timestamp": "0x00",
+        "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "gasLimit": "0x1C9C380",
+        "baseFeePerGas": "0x0"
+      },
+      "nodes": [],
+      "accounts": {
+        "0000000000000000000000000000000000000000": { "balance": "1" },
+        "0000000000000000000000000000000000000001": { "balance": "1", "nonce": "0", "builtin": { "name": "ecrecover", "pricing": { "linear": { "base": 3000, "word": 0 } } } },
+        "0000000000000000000000000000000000000002": { "balance": "1", "nonce": "0", "builtin": { "name": "sha256", "pricing": { "linear": { "base": 60, "word": 12 } } } },
+        "0000000000000000000000000000000000000003": { "balance": "1", "nonce": "0", "builtin": { "name": "ripemd160", "pricing": { "linear": { "base": 600, "word": 120 } } } },
+        "0000000000000000000000000000000000000004": { "balance": "1", "nonce": "0", "builtin": { "name": "identity", "pricing": { "linear": { "base": 15, "word": 3 } } } },
+        "0000000000000000000000000000000000000005": { "balance": "1", "nonce": "0", "builtin": { "name": "modexp", "activate_at": 1700000, "pricing": { "modexp": { "divisor": 20 } } } },
+        "0000000000000000000000000000000000000006": { "balance": "1", "nonce": "0", "builtin": { "name": "alt_bn128_add", "activate_at": 1700000, "pricing": { "linear": { "base": 500, "word": 0 } } } },
+        "0000000000000000000000000000000000000007": { "balance": "1", "nonce": "0", "builtin": { "name": "alt_bn128_mul", "activate_at": 1700000, "pricing": { "linear": { "base": 40000, "word": 0 } } } },
+        "0000000000000000000000000000000000000008": { "balance": "1", "nonce": "0", "builtin": { "name": "alt_bn128_pairing", "activate_at": 1700000, "pricing": { "alt_bn128_pairing": { "base": 100000, "pair": 80000 } } } },
+        "0000000000000000000000000000000000000009": { "balance": "1" },
+        "7e5f4552091a69125d5dfcb7b8c2659029395bdf": { "balance": "1000000000000000000000000" },
+        "2b5ad5c4795c026514f8317c7a215e218dccd6cf": { "balance": "1000000000000000000000000" },
+        "6813eb9362372eef6200f3b1dbc3f819671cba69": { "balance": "1000000000000000000000000" },
+        "1eff47bc3a10a45d4b230b5d10e37751fe6aa718": { "balance": "1000000000000000000000000" },
+        "e1ab8145f7e55dc933d51a18c793f901a3a0b276": { "balance": "1000000000000000000000000" },
+        "e57bfe9f44b819898f47bf37e5af72a0783e1141": { "balance": "1000000000000000000000000" },
+        "d41c057fd1c78805aac12b0a94a405c0461a6fbb": { "balance": "1000000000000000000000000" },
+        "f1f6619b38a98d6de0800f1defc0a6399eb6d30c": { "balance": "1000000000000000000000000" },
+        "f7edc8fa1ecc32967f827c9043fcae6ba73afa5c": { "balance": "1000000000000000000000000" },
+        "4cceba2d7d2b4fdce4304d3e09a1fea9fbeb1528": { "balance": "1000000000000000000000000" },
+        "f39fd6e51aad88f6f4ce6ab8827279cfffb92266": { "balance": "1000000000000000000000000" },
+        "70997970c51812dc3a010c7d01b50e0d17dc79c8": { "balance": "1000000000000000000000000" },
+        "3c44cdddb6a900fa2b585dd299e03d12fa4293bc": { "balance": "1000000000000000000000000" },
+        "90f79bf6eb2c4f870365e785982e1f101e93b906": { "balance": "1000000000000000000000000" },
+        "1164697bb17eab2da95266b380d691a853a9ac08": { "balance": "1000000000000000000000000" },
+        "9965507d1a55bcc2695c58ba16fb37d819b0a4dc": { "balance": "1000000000000000000000000" },
+        "976ea74026e726554db657fa54763abd0c3a0aa9": { "balance": "1000000000000000000000000" },
+        "14dc79964da2c08b23698b3d3cc7ca32193d9955": { "balance": "1000000000000000000000000" },
+        "7031e989cf8b879364cfab3e7c50e8faa902f9a6": { "balance": "1000000000000000000000000" },
+        "a0ee7a142d267c1f36714e4a8f75612f20a79720": { "balance": "1000000000000000000000000" },
+        "bcd4042de499d14e55001ccbb24a551f3b954096": { "balance": "1000000000000000000000000" },
+        "71be63f3384f5fb98995898a86b02fb2426c5788": { "balance": "1000000000000000000000000" },
+        "fabb0ac9d68b0b445fb7357272ff202c5651694a": { "balance": "1000000000000000000000000" },
+        "1cbd3b2770909d4e10f157cabc84c7264073c9ec": { "balance": "1000000000000000000000000" },
+        "df3e18d64bc6a983f673ab319ccae4f1a57c7097": { "balance": "1000000000000000000000000" },
+        "cd3b766ccdd6ae721141f452c550ca635964ce71": { "balance": "1000000000000000000000000" },
+        "b4267c55c00f81b6308a7c5818e61ac965503e55": { "balance": "1000000000000000000000000" },
+        "bda5747bfd65f08deb54cb465eb87d40e51b197e": { "balance": "1000000000000000000000000" }
+      }
+    }

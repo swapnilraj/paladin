@@ -217,9 +217,11 @@ func (bl *blockListener) listenLoop(listenerInitiated *chan struct{}) {
 			})
 
 			// Sleep for the polling interval, or until we're shoulder tapped by the newHeads listener
+			var wasNewHeadsTapped bool
 			select {
 			case <-time.After(bl.blockPollingInterval):
 			case <-bl.newHeadsTap:
+				wasNewHeadsTapped = true
 			case <-bl.ctx.Done():
 				return false // context cancelled, exit loop
 			}
@@ -243,6 +245,32 @@ func (bl *blockListener) listenLoop(listenerInitiated *chan struct{}) {
 				log.L(bl.ctx).Errorf("Failed to query block filter changes: %s", rpcErr)
 				failCount++
 				return true
+			}
+
+			if len(blockHashes) == 0 && wasNewHeadsTapped {
+				// A newHeads notification indicated a block was mined, but the filter returned empty.
+				// Some nodes (e.g. Nethermind) silently expire filters by returning [] instead of a
+				// "filter not found" error, which prevents normal filter recreation. Also handles the
+				// race where the WS notification fires before the filter is updated by the node.
+				// Check the chain height and fetch any missed blocks directly.
+				var currentBlockHeight ethtypes.HexUint64
+				if checkErr := bl.wsConn.CallRPC(bl.ctx, &currentBlockHeight, "eth_blockNumber"); checkErr == nil {
+					bl.highestBlockMux.RLock()
+					highest := bl.highestBlock
+					bl.highestBlockMux.RUnlock()
+					if currentBlockHeight.Uint64() > highest {
+						log.L(bl.ctx).Warnf("Block filter '%v' may have expired silently (chain at %d, highest known %d). Recreating filter and fetching missed blocks directly.", filter, currentBlockHeight.Uint64(), highest)
+						filter = ""
+						for blockNum := ethtypes.HexUint64(highest + 1); uint64(blockNum) <= currentBlockHeight.Uint64(); blockNum++ {
+							bi, fetchErr := bl.getBlockInfoByNumber(bl.ctx, blockNum)
+							if fetchErr != nil || bi == nil {
+								break
+							}
+							bl.reconcileCanonicalChain(bi)
+							bl.notifyBlock(bi)
+						}
+					}
+				}
 			}
 
 			var notifyPos *list.Element

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nethermind
+  labels:
+    app.kubernetes.io/name: nethermind
+    app.kubernetes.io/component: blockchain
+spec:
+  type: {{ .Values.nethermind.service.type }}
+  selector:
+    app.kubernetes.io/name: nethermind
+  ports:
+    # Both HTTP JSON-RPC and WebSocket JSON-RPC are served on the same port by Nethermind
+    - name: rpc-http
+      port: {{ .Values.nethermind.service.port }}
+      targetPort: rpc-http
+      protocol: TCP

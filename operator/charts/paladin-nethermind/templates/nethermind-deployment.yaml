@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nethermind
+  labels:
+    app.kubernetes.io/name: nethermind
+    app.kubernetes.io/component: blockchain
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nethermind
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nethermind
+        app.kubernetes.io/component: blockchain
+    spec:
+      containers:
+        - name: nethermind
+          image: {{ .Values.nethermind.image.repository }}:{{ .Values.nethermind.image.tag }}
+          imagePullPolicy: {{ .Values.nethermind.image.pullPolicy }}
+          args:
+            - --config=spaceneth
+            - --JsonRpc.Host={{ .Values.nethermind.rpcHost }}
+            - --JsonRpc.Port={{ .Values.nethermind.rpcPort }}
+            - --Init.ChainSpecPath=chainspec/paladin.json
+            {{- range .Values.nethermind.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          ports:
+            - name: rpc-http
+              containerPort: {{ .Values.nethermind.rpcPort }}
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.nethermind.rpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.nethermind.rpcPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.nethermind.resources | nindent 12 }}
+          volumeMounts:
+            - name: chainspec
+              mountPath: /nethermind/chainspec/paladin.json
+              subPath: chainspec.json
+              readOnly: true
+      volumes:
+        - name: chainspec
+          configMap:
+            name: nethermind-chainspec

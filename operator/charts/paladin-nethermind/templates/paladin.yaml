@@ -1,0 +1,92 @@
+{{- $prefix := .Values.paladin.nodeNamePrefix }}
+{{- $basePort := .Values.paladin.baseNodePort }}
+{{- $count := .Values.nodeCount | int }}
+{{- $nethermindRpcPort := .Values.nethermind.service.port }}
+
+{{- range $i, $ := until $count }}
+{{- $name := printf "%s%d" $prefix (add $i 1) }}
+---
+apiVersion: core.paladin.io/v1alpha1
+kind: Paladin
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  baseLedgerEndpoint:
+    type: endpoint
+    endpoint:
+      # Nethermind serves both HTTP and WebSocket on the same port
+      jsonrpc: "http://nethermind:{{ $nethermindRpcPort }}"
+      ws: "ws://nethermind:{{ $nethermindRpcPort }}"
+
+  config: |
+    log:
+      level: debug
+    publicTxManager:
+      gasLimit:
+        gasEstimateFactor: 2.0
+    wallets:
+    - name: signer-1
+      keySelector: "^(owner|registry\\..+|noto\\.operator|pente\\.operator|zeto\\.operator)$"
+      signer:
+        keyStore:
+          type: static
+          static:
+            file: /keystores/signer-hd/keys.yaml
+
+  database:
+    mode: sidecarPostgres
+    migrationMode: auto
+
+  secretBackedSigners:
+    - name: signer-hd
+      secret: {{ $name }}.keys
+      type: preConfigured
+      derivationType: bip32
+      keySelector: .*
+
+  domains:
+    - labelSelector:
+        matchLabels:
+          paladin.io/domain-name: noto
+    - labelSelector:
+        matchLabels:
+          paladin.io/domain-name: zeto
+    - labelSelector:
+        matchLabels:
+          paladin.io/domain-name: pente
+
+  registries:
+    - labelSelector:
+        matchLabels:
+          paladin.io/registry-name: evm-registry
+
+  transports:
+    - name: grpc
+      plugin:
+        type: c-shared
+        library: /app/transports/libgrpc.so
+      configJSON: |
+        {
+          "port": 9000,
+          "address": "0.0.0.0"
+        }
+      ports:
+        - name: transport-grpc
+          port: 9000
+          targetPort: 9000
+      tls:
+        secretName: paladin-{{ $name }}-mtls
+        certName: paladin-{{ $name }}-mtls
+
+  service:
+    type: NodePort
+    ports:
+      - name: rpc-http
+        port: 8548
+        nodePort: {{ add $basePort (mul $i 100) }}
+      - name: rpc-ws
+        port: 8549
+        nodePort: {{ add $basePort (add (mul $i 100) 1) }}
+{{- end }}

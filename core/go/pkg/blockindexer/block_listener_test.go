@@ -1444,3 +1444,63 @@ func TestBlockListenerClosedBeforeEstablishingBlockHeight(t *testing.T) {
 	bl.listenLoop(&listenerInitiated)
 
 }
+
+func TestBlockListenerSilentFilterExpiryRecovery(t *testing.T) {
+	// Tests that when a node silently expires a block filter (returning [] instead of
+	// "filter not found"), the block listener detects the issue via eth_blockNumber and
+	// recovers by fetching missed blocks directly.
+
+	_, bl, mRPC, done := newTestBlockListener(t)
+	bl.blockPollingInterval = 1 * time.Microsecond
+
+	block1000Hash := ethtypes.MustNewHexBytes0xPrefix(pldtypes.RandHex(32))
+	block1001Hash := ethtypes.MustNewHexBytes0xPrefix(pldtypes.RandHex(32))
+
+	// Initial block height at startup (consumed by establishBlockHeightWithRetry)
+	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_blockNumber").Return(nil).Run(func(args mock.Arguments) {
+		hbh := args[1].(*ethtypes.HexUint64)
+		*hbh = ethtypes.HexUint64(1000)
+	}).Once()
+
+	// Persistent eth_blockNumber mock returns 1001 (chain has advanced since filter expired)
+	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_blockNumber").Return(nil).Run(func(args mock.Arguments) {
+		hbh := args[1].(*ethtypes.HexUint64)
+		*hbh = ethtypes.HexUint64(1001)
+	})
+
+	// Filter creation (persistent, returns same filter ID for simplicity)
+	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_newBlockFilter").Return(nil).Run(func(args mock.Arguments) {
+		hbh := args[1].(*string)
+		*hbh = testBlockFilterID1
+	})
+
+	// First getFilterChanges (on initial tap) returns empty - simulating silent filter expiry
+	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_getFilterChanges", []interface{}{testBlockFilterID1}).
+		Return(nil).Once()
+
+	// Block 1001 fetched directly by number after expiry detection
+	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_getBlockByNumber", mock.MatchedBy(func(params []interface{}) bool {
+		return params[0].(ethtypes.HexUint64) == 1001 && params[1].(bool)
+	})).Return(nil).Run(func(args mock.Arguments) {
+		*args[1].(**BlockInfoJSONRPC) = &BlockInfoJSONRPC{
+			Number:     ethtypes.HexUint64(1001),
+			Hash:       block1001Hash,
+			ParentHash: block1000Hash,
+		}
+	})
+
+	// Subsequent getFilterChanges calls (after filter recreation) return empty and close
+	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_getFilterChanges", mock.Anything).
+		Return(nil).Run(func(args mock.Arguments) {
+		go done()
+	})
+
+	bl.start()
+
+	// Block 1001 should be received via direct fetch (filter expiry recovery path)
+	assert.Equal(t, block1001Hash, (<-bl.channel()).Hash)
+
+	<-bl.listenLoopDone
+
+	assert.Equal(t, uint64(1001), bl.highestBlock)
+}

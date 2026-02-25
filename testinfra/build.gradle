@@ -62,3 +62,27 @@ task removeBesuBootstrapTool(type: Exec, dependsOn: stopTestInfra) {
 
 task clean(type: Delete, dependsOn: [tasks.removeBesuBootstrapTool, tasks.stopTestInfra]) {
 }
+
+// ── Nethermind alternative infrastructure ──────────────────────────────────
+// Drop-in replacement for startTestInfra/stopTestInfra using Nethermind.
+// Covers the free-gas chain only (equivalent to besu_free on ports 8545/8546).
+// No bootstrap image is required; Nethermind's built-in dev config is used.
+//
+// Usage:
+//   ./gradlew startNethermindInfra   # start postgres + nethermind
+//   ./gradlew stopNethermindInfra    # stop and remove volumes
+//
+// After starting, point the component tests at Nethermind:
+//   export BESU_PORT=8545   (or edit core/go/componenttest/.env)
+
+task startNethermindInfra(type: DockerCompose) {
+    composeFile 'docker-compose-nethermind.yml'
+    projectName 'paladin-nethermind'
+    args 'up', '-d', '--wait', '--wait-timeout', 60
+}
+
+task stopNethermindInfra(type: DockerCompose) {
+    composeFile 'docker-compose-nethermind.yml'
+    projectName 'paladin-nethermind'
+    args 'down', '-v'
+}

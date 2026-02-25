@@ -1,0 +1,22 @@
+{{- $prefix := .Values.paladin.nodeNamePrefix }}
+{{- $count := .Values.nodeCount | int }}
+{{- $adminNode := printf "%s1" $prefix }}
+
+{{- range $i, $ := until $count }}
+{{- $name := printf "%s%d" $prefix (add $i 1) }}
+---
+apiVersion: core.paladin.io/v1alpha1
+kind: PaladinRegistration
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  registry: evm-registry
+  registryAdminNode: {{ $adminNode }}
+  registryAdminKey: registry.operator
+  node: {{ $name }}
+  nodeAdminKey: registry.{{ $name }}
+  transports:
+    - grpc
+{{- end }}

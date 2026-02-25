@@ -1,0 +1,50 @@
+# Number of Paladin nodes to deploy (must be >= 1)
+nodeCount: 3
+
+nethermind:
+  image:
+    repository: nethermind/nethermind
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  # JSON-RPC listen address inside the container
+  rpcHost: "0.0.0.0"
+  # Single port for both HTTP and WebSocket JSON-RPC
+  rpcPort: 8545
+
+  # Nethermind CLI flags
+  extraArgs:
+    - --Blocks.MinGasPrice=0
+    - --Blocks.TargetBlockGasLimit=30000000
+
+  service:
+    type: ClusterIP
+    port: 8545
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2
+      memory: 2Gi
+
+paladin:
+  nodeNamePrefix: node
+  image:
+    repository: ghcr.io/lfdt-paladin/paladin
+    tag: main
+    pullPolicy: Always
+  # Base NodePort for Paladin RPC-HTTP. Node i gets baseNodePort + (i-1)*100
+  # node1 → 31548, node2 → 31648, node3 → 31748
+  baseNodePort: 31548
+
+postgres:
+  image:
+    repository: postgres
+    tag: 17.6
+
+# Chainspec for Nethermind (PaladinDev network — chain ID 1337, NethDev AutoSeal, zero base fee)
+chainspec:
+  name: "PaladinDev"
+  networkID: "0x539"

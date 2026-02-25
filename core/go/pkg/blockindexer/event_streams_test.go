@@ -47,7 +47,7 @@ func mockBlockListenerNil(mRPC *rpcclientmocks.WSClient) {
 	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_blockNumber").Return(nil).Run(func(args mock.Arguments) {
 		hbh := args[1].(*ethtypes.HexUint64)
 		*hbh = ethtypes.HexUint64(0)
-	}).Once()
+	}).Maybe()
 	mRPC.On("CallRPC", mock.Anything, mock.Anything, "eth_newBlockFilter").Return(nil).Run(func(args mock.Arguments) {
 		hbh := args[1].(*string)
 		*hbh = "filter_id1"

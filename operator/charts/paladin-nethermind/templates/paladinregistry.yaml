@@ -1,0 +1,15 @@
+apiVersion: core.paladin.io/v1alpha1
+kind: PaladinRegistry
+metadata:
+  labels:
+    paladin.io/registry-name: evm-registry
+  name: evm-registry
+spec:
+  type: evm
+  evm:
+    smartContractDeployment: registry
+  plugin:
+    type: c-shared
+    library: /app/registries/libevm.so
+  configJSON: |
+    {}
